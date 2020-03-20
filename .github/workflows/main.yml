@@ -39,5 +39,5 @@ jobs:
       
       - name: Deploy to Firebase
         run: |
-          firebase --token "${{secrets.FIREBASE_TOKEN}}" use sensys-dev
+          firebase --token "${{secrets.FIREBASE_TOKEN}}" use find-help-aa0d5
           firebase --token "${{secrets.FIREBASE_TOKEN}}" deploy
