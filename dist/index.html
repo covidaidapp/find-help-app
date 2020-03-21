@@ -37,6 +37,9 @@
 
   <body>
     <div class="container-fluid">
+      <div class="row">
+        <input id="address-input" class="form-control col" type="text" placeholder="Type an address or location...">
+      </div>
       <div id="floating-controls" class="row">
         <input class="col-sm" onclick="window.sourcecode.filterVisibility();" type=button value="Clear Filters"
           style="background-color: #fff;">
@@ -68,7 +71,7 @@
     <!-- Google Maps Dependencies -->
     <script src="https://unpkg.com/@google/markerclustererplus@4.0.1/dist/markerclustererplus.min.js"></script>
     <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5ywRBOAoyjwic5SzT9q3MPjLT1aibHO8&callback=sourcecode.initMap">
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5ywRBOAoyjwic5SzT9q3MPjLT1aibHO8&libraries=places&callback=sourcecode.initMap">
       </script>
 
     <!-- Bootstrap JS Dependencies -->

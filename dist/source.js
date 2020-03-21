@@ -69,6 +69,41 @@ sourcecode.initMap = function () {
 
     });
 
+    // Create the search box and link it to the UI element.
+    if (map) {
+        var input = document.getElementById('address-input');
+        var searchBox = new google.maps.places.SearchBox(input);
+
+        map.addListener('bounds_changed', function () {
+            searchBox.setBounds(map.getBounds());
+        });
+
+        searchBox.addListener('places_changed', function () {
+            var places = searchBox.getPlaces();
+            var bounds = new google.maps.LatLngBounds();
+
+            if (places.length == 0) {
+                return;
+            }
+
+            places.forEach(function (place) {
+                if (!place.geometry) {
+                    console.log("Returned place contains no geometry");
+                    return;
+                }
+
+                if (place.geometry.viewport) {
+                    bounds.union(place.geometry.viewport);
+                } else {
+                    bounds.extend(place.geometry.location);
+                }
+            });
+
+            map.fitBounds(bounds);
+        })
+    }
+
+
     // We iterate over all locations to create markers
     // This pretty much orchestrates everything since the map is the main interaction window
     markers = Object.values(locations)
@@ -136,22 +171,30 @@ sourcecode.initMap = function () {
                     color = '#F4B400'
                 }
 
-                // Issue: Product is too dark at zoom levels
-                // Solution: If + Else: Use this to create a border color change on the map itself vs rendering the radius to map.
-                // Only push this if the radius is less than the diagonal distance on the map screen.
-                // If it covers the whole map we don't want to render the circle as too many circles make the map unreadable.
-                // Additional UX Improvement -- Increase the stroke logrithmically to a max stroke so users are nudged slightly that we are no longer
-                // TODO: Write the above code
-                serviceCircles.push(new google.maps.Circle({
-                    strokeColor: color,
-                    strokeOpacity: 0.3,
-                    strokeWeight: 1,
-                    fillColor: color,
-                    fillOpacity: 0.15,
-                    map: map,
-                    center: marker.position,
-                    radius: location.serviceRadius
-                }));
+                var mapBoundingBox = map.getBounds()
+                var topRight = mapBoundingBox.getNorthEast();
+                var bottomLeft = mapBoundingBox.getSouthWest();
+                var markerPosition = marker.position;
+                var radius = location.serviceRadius;
+
+                // Now compare the distance from the marker to corners of the box;
+                var distanceToTopRight = sourcecode.haversineDistance(markerPosition, topRight);
+                var distanceToBottomLeft = sourcecode.haversineDistance(markerPosition, bottomLeft);
+
+                if (distanceToBottomLeft > radius || distanceToTopRight > radius) {
+                    serviceCircles.push(new google.maps.Circle({
+                        strokeColor: color,
+                        strokeOpacity: 0.3,
+                        strokeWeight: 1,
+                        fillColor: color,
+                        fillOpacity: 0.15,
+                        map: map,
+                        center: marker.position,
+                        radius: radius
+                    }));
+                } else {
+                    // TODO: Add to border of map instead of adding a circle
+                }
             });
 
             return marker;
@@ -251,4 +294,19 @@ sourcecode.activateMarker = function (markerLabel) {
     // Force a click event on the marker to trigger the info bubble using the map 
     // view to control rendering beacuse it's less error prone to API changes with low maintenance.
     new google.maps.event.trigger(foundMarker, 'click');
+}
+
+sourcecode.haversineDistance = function (latLng1, latLng2) {
+    var lon1 = latLng1.lng()
+    var lon2 = latLng2.lng()
+    var radlat1 = Math.PI * latLng1.lat() / 180
+    var radlat2 = Math.PI * latLng2.lat() / 180
+    var theta = lon1 - lon2
+    var radtheta = Math.PI * theta / 180
+    var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+    dist = Math.acos(dist)
+    dist = dist * 180 / Math.PI
+    dist = dist * 60 * 1.1515
+    dist = dist * 1609.344 // for meters
+    return dist
 }
