@@ -17,6 +17,12 @@ sourcecode.visibleMarkers = visibleMarkers;
 sourcecode.infoWindow = infoWindow;
 // End of Namespacing 
 
+sourcecode.logEvent = function (name) {
+    if (window.analytics && window.analytics.logEvent) {
+        window.analytics.logEvent(name);
+    }
+}
+
 sourcecode.clearActiveMarker = function () {
     // Clear an attached bubble
     if (infoWindow && infoWindow.setPosition) {
@@ -27,6 +33,7 @@ sourcecode.clearActiveMarker = function () {
 
 // Filter markers by service type
 sourcecode.filterVisibility = function (filter) {
+    sourcecode.logEvent('filter-visibility', { filter: filter })
     var activeMarkerStillMatchesQuery = false
     markers.forEach(function (marker) {
         if (filter) {
@@ -72,6 +79,8 @@ sourcecode.initMap = function () {
             });
 
             marker.addListener('click', function () {
+                sourcecode.logEvent('click-marker', { location: location })
+
                 var contentString = '<div id="content">' +
                     '<div id="siteNotice">' +
                     '</div>' +
@@ -105,6 +114,8 @@ sourcecode.initMap = function () {
             // We want to piggyback on an existing event so that we can render a circle of influence
             // when the marker cluster lib tells us it's singled out a marker.
             marker.addListener('title_changed', function () {
+                var location = locations[marker.getLabel()];
+                sourcecode.logEvent('see-marker', { location: location })
 
                 // Save some processing juice here by skipping on hidden markers (based on a filter users select for service types)
                 if (!marker.getVisible()) {
@@ -139,7 +150,7 @@ sourcecode.initMap = function () {
                     fillOpacity: 0.15,
                     map: map,
                     center: marker.position,
-                    radius: locations[marker.getLabel()].serviceRadius
+                    radius: location.serviceRadius
                 }));
             });
 
@@ -194,6 +205,10 @@ sourcecode.initMap = function () {
         // Rebuild list using currently visible markers
         visibleMarkers.forEach(function (marker) {
             var location = locations[marker.getLabel()]
+
+            var location = location[foundMarker.getLabel()]
+            sourcecode.logEvent('see-list-item', { location: location })
+
             newListContent +=
                 '<a onclick="window.sourcecode.activateMarker(' + marker.getLabel() + ');" class="list-group-item list-group-item-action flex-column align-items-start">' +
                 '<div class="d-flex w-100 justify-content-between">' +
@@ -222,6 +237,9 @@ sourcecode.initMap = function () {
 // Handle click events in the right scroll view by triggering the info window for the map view
 sourcecode.activateMarker = function (markerLabel) {
     var foundMarker;
+
+    var location = location[foundMarker.getLabel()]
+    sourcecode.logEvent('click-list-item', { location: location })
 
     visibleMarkers.forEach(function (marker) {
         // using only == here (vs. ===) because one is an int and the other is a string so we want auto type resolution
