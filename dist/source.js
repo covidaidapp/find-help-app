@@ -17,9 +17,10 @@ sourcecode.visibleMarkers = visibleMarkers;
 sourcecode.infoWindow = infoWindow;
 // End of Namespacing 
 
-sourcecode.logEvent = function (name) {
+sourcecode.logEvent = function (name, parameters) {
     if (window.analytics && window.analytics.logEvent) {
-        window.analytics.logEvent(name);
+        parameters.app_version = window.app_version;
+        window.analytics.logEvent(name, parameters);
     }
 }
 
@@ -107,7 +108,7 @@ sourcecode.initMap = function () {
                 }
 
                 map.panTo(marker.getPosition())
-                map.setZoom(14)
+                map.setZoom(18)
             });
 
             // The Marker Cluster app doesn't have events for when it renders a single marker without a cluster.
