@@ -6,10 +6,12 @@ var sourcecode = window.sourcecode;
 var markers = [];
 var serviceCircles = [];
 var markerCluster = null;
+var visibleMarkers = [];
 
 sourcecode.markers = markers;
 sourcecode.serviceCircles = serviceCircles;
 sourcecode.markerCluster = markerCluster;
+sourcecode.visibleMarkers = visibleMarkers;
 // End of Namespacing 
 
 // Filter markers by service type
@@ -76,7 +78,9 @@ sourcecode.initMap = function () {
                 infoWindows[i].open(map, marker);
             });
 
-
+            // The Marker Cluster app doesn't have events for when it renders a single marker without a cluster.
+            // We want to piggyback on an existing event so that we can render a circle of influence
+            // when the marker cluster lib tells us it's singled out a marker.
             marker.addListener('title_changed', function () {
                 if (!marker.getVisible()) {
                     return;
@@ -85,6 +89,8 @@ sourcecode.initMap = function () {
                 var color;
                 var services = marker.title.split(',')
                 if (services.indexOf('mobility') !== -1) {
+                    color = '#742388'
+                } else if (services.indexOf('medicine') !== -1) {
                     color = '#4285F4'
                 } else if (services.indexOf('food') !== -1) {
                     color = '#DB4437'
@@ -95,7 +101,7 @@ sourcecode.initMap = function () {
                 }
 
                 // Only push this if Radius is less than current radius
-                // TODO: Write the above code
+                // TODO: Write the above code for reasons outlined below
                 serviceCircles.push(new google.maps.Circle({
                     strokeColor: color,
                     strokeOpacity: 0.3,
@@ -107,9 +113,11 @@ sourcecode.initMap = function () {
                     radius: locations[marker.getLabel()].serviceRadius
                 }));
                 // Issue: Product is too dark at zoom levels
-                // Solution: Else use this to create a border color change on the map
-                // Increase the stroke logrithmically to a max
-                // TODO: Write the above
+                // Solution: Else use this to create a border color change on the map itself vs rendering the radius to map.
+                // Lots of overlapping radii will be too dark
+                // Additional UX Improvement -- Increase the stroke logrithmically to a max stroke so users are nudged slightly that we are no longer
+                // drawing the circle of influence since they're inside it
+                // TODO: Write the above code :D
             });
 
             return marker;
@@ -136,7 +144,7 @@ sourcecode.initMap = function () {
     })
 
     markerCluster.addListener('clusteringend', function (mc) {
-        var visibleMarkers = [];
+        visibleMarkers = [];
         mc.getClusters().forEach(function (cluster) {
             if (cluster.getSize() === 1) {
                 var singleMarker = cluster.getMarkers()[0]
@@ -156,11 +164,13 @@ sourcecode.initMap = function () {
                 }
             }
         });
+
+        // Prepare HTML content for side list view
         var newListContent = ''
         visibleMarkers.forEach(function (marker) {
             var location = locations[marker.getLabel()]
             newListContent +=
-                '<a href="#" class="list-group-item list-group-item-action flex-column align-items-start">' +
+                '<a onclick="window.sourcecode.activateMarker(' + marker.getLabel() + ');" class="list-group-item list-group-item-action flex-column align-items-start">' +
                 '<div class="d-flex w-100 justify-content-between">' +
                 '<h5 class="mb-1">' + location.contentTitle + '</h5>' +
                 '<small class="text-muted">' + location.types.join(', ') + '</small>' +
@@ -177,8 +187,23 @@ sourcecode.initMap = function () {
                 '<p class="mb-1">Try looking at a different area of the map</p>' +
                 '</a >'
         }
-        var listDiv = $("#visible-markers").html(newListContent);
+
+        // Update the list on the right
+        $("#visible-markers").html(newListContent);
     })
 }
 
-sourcecode.initMap();
+sourcecode.activateMarker = function (markerLabel) {
+    var foundMarker;
+
+    visibleMarkers.forEach(function (marker) {
+        // using only == here (vs. ===) because one is an int and the other is a string so we want auto type resolution
+        if (marker.getLabel() == markerLabel) {
+            foundMarker = marker;
+            return;
+        }
+    });
+
+    // Force a click event on the marker to trigger the info bubble
+    new google.maps.event.trigger(foundMarker, 'click');
+}

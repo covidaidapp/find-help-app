@@ -36,23 +36,26 @@
   <body>
     <div class="container-fluid">
       <div id="floating-controls" class="row">
-        <input class="col-sm" onclick="sourcecode.filterVisiblity();" type=button value="Clear Filters"
+        <input class="col-sm" onclick="window.sourcecode.filterVisibility();" type=button value="Clear Filters"
           style="background-color: #fff;">
-        <input class="col-sm" onclick="sourcecode.filterVisiblity('food');" type=button value="Food"
+        <input class="col-sm" onclick="window.sourcecode.filterVisibility('food');" type=button value="Food"
           style="background-color: #DB4437;">
-        <input class="col-sm" onclick="sourcecode.filterVisiblity('supplies');" type=button value="Supplies"
+        <input class="col-sm" onclick="window.sourcecode.filterVisibility('supplies');" type=button value="Supplies"
           style="background-color: #0F9D58;">
-        <input class="col-sm" onclick="sourcecode.filterVisiblity('aid');" type=button value="Aid"
+        <input class="col-sm" onclick="window.sourcecode.filterVisibility('aid');" type=button value="Aid"
           style="background-color: #F4B400;">
-        <input class="col-sm" onclick="sourcecode.filterVisiblity('mobility');" type=button value="Mobility"
+        <input class="col-sm" onclick="window.sourcecode.filterVisibility('mobility');" type=button value="Mobility"
           style="background-color: #4285F4;">
+        <input class="col-sm" onclick="window.sourcecode.filterVisibility('medicine');" type=button value="Medicine"
+          style="background-color: #742388;">
       </div>
-      <div class="row">
-        <div id="map" class="col-9 map-responsive"></div>
-        <div id="visible-markers" class="col-3 list-group list-group-flush">
+    </div>
+    <div class="row">
+      <div id="map" class="col-9 map-responsive"></div>
+      <div id="visible-markers" class="col-3 list-group list-group-flush">
 
-        </div>
       </div>
+    </div>
     </div>
 
     <!-- Our Data + Code -->
