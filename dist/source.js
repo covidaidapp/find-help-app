@@ -115,7 +115,6 @@ sourcecode.initMap = function () {
             // We want to piggyback on an existing event so that we can render a circle of influence
             // when the marker cluster lib tells us it's singled out a marker.
             marker.addListener('title_changed', function () {
-                var location = locations[marker.getLabel()];
                 sourcecode.logEvent('see-marker', { location: location })
 
                 // Save some processing juice here by skipping on hidden markers (based on a filter users select for service types)
@@ -206,8 +205,6 @@ sourcecode.initMap = function () {
         // Rebuild list using currently visible markers
         visibleMarkers.forEach(function (marker) {
             var location = locations[marker.getLabel()]
-
-            var location = location[foundMarker.getLabel()]
             sourcecode.logEvent('see-list-item', { location: location })
 
             newListContent +=
@@ -238,14 +235,15 @@ sourcecode.initMap = function () {
 // Handle click events in the right scroll view by triggering the info window for the map view
 sourcecode.activateMarker = function (markerLabel) {
     var foundMarker;
-
-    var location = location[foundMarker.getLabel()]
-    sourcecode.logEvent('click-list-item', { location: location })
-
     visibleMarkers.forEach(function (marker) {
         // using only == here (vs. ===) because one is an int and the other is a string so we want auto type resolution
         if (marker.getLabel() == markerLabel) {
             foundMarker = marker;
+
+            // Make sure we actually have a marker. Outside of here this operation isn't null safe.
+            var location = locations[foundMarker.getLabel()]
+            sourcecode.logEvent('click-list-item', { location: location })
+
             return;
         }
     });
