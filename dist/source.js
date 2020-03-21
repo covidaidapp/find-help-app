@@ -7,24 +7,41 @@ var markers = [];
 var serviceCircles = [];
 var markerCluster = null;
 var visibleMarkers = [];
+var infoWindow = null;
+var activeMarker = null;
 
 sourcecode.markers = markers;
 sourcecode.serviceCircles = serviceCircles;
 sourcecode.markerCluster = markerCluster;
 sourcecode.visibleMarkers = visibleMarkers;
+sourcecode.infoWindow = infoWindow;
 // End of Namespacing 
+
+sourcecode.clearActiveMarker = function () {
+    // Clear an attached bubble
+    if (infoWindow && infoWindow.setPosition) {
+        infoWindow.setPosition()
+    }
+    activeMarker = null
+}
 
 // Filter markers by service type
 sourcecode.filterVisibility = function (filter) {
+    var activeMarkerStillMatchesQuery
     markers.forEach(function (marker) {
         if (filter) {
             // If filtering only set the markers that match to true
             var services = marker.title.split(',') // We hijack the title attribute of the marker to track it's services
             var visiblity = services.indexOf(filter) !== -1
             marker.setVisible(visiblity);
+
+            if (activeMarker && activeMarker.getLabel && marker.getLabel() == activeMarker.getLabel()) {
+                activeMarkerStillMatchesQuery = true;
+            }
         } else {
             // If no filter set to true
             marker.setVisible(true);
+            activeMarkerStillMatchesQuery = true;
         }
     })
 
@@ -42,7 +59,6 @@ sourcecode.initMap = function () {
         mapTypeControl: false
 
     });
-    var infoWindow = null;
 
     // We iterate over all locations to create markers
     // This pretty much orchestrates everything since the map is the main interaction window
@@ -55,8 +71,6 @@ sourcecode.initMap = function () {
             });
 
             marker.addListener('click', function () {
-                map.setCenter(marker.getPosition());
-
                 var contentString = '<div id="content">' +
                     '<div id="siteNotice">' +
                     '</div>' +
@@ -72,14 +86,14 @@ sourcecode.initMap = function () {
                     '</div>';
 
                 // Reuse the info window or not
-                if (infoWindow && infoWindow.setContentString) {
-                    infoWindow.setContentString(contentString)
-                    infoWindows[i].open(map, marker);
+                if (infoWindow && infoWindow.setContent) {
+                    infoWindow.open(map, marker);
+                    infoWindow.setContent(contentString)
                 } else {
-                    infoWindow = google.maps.InfoWindow({
+                    infoWindow = new google.maps.InfoWindow({
                         content: contentString
                     })
-                    infoWindows[i].open(map, marker);
+                    infoWindow.open(map, marker);
                 }
             });
 
