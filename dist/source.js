@@ -20,14 +20,14 @@ sourcecode.infoWindow = infoWindow;
 sourcecode.clearActiveMarker = function () {
     // Clear an attached bubble
     if (infoWindow && infoWindow.setPosition) {
-        infoWindow.setPosition()
+        infoWindow.close()
     }
     activeMarker = null
 }
 
 // Filter markers by service type
 sourcecode.filterVisibility = function (filter) {
-    var activeMarkerStillMatchesQuery
+    var activeMarkerStillMatchesQuery = false
     markers.forEach(function (marker) {
         if (filter) {
             // If filtering only set the markers that match to true
@@ -46,6 +46,7 @@ sourcecode.filterVisibility = function (filter) {
     })
 
     // Redraw all markers -- this will trigger the "clusterstart" and "clusterend" events so we can redraw all our extras as well
+    activeMarkerStillMatchesQuery ? null : sourcecode.clearActiveMarker()
     markerCluster.repaint ? markerCluster.repaint() : null
 }
 
@@ -95,6 +96,9 @@ sourcecode.initMap = function () {
                     })
                     infoWindow.open(map, marker);
                 }
+
+                map.panTo(marker.getPosition())
+                map.setZoom(14)
             });
 
             // The Marker Cluster app doesn't have events for when it renders a single marker without a cluster.
@@ -193,7 +197,7 @@ sourcecode.initMap = function () {
             newListContent +=
                 '<a onclick="window.sourcecode.activateMarker(' + marker.getLabel() + ');" class="list-group-item list-group-item-action flex-column align-items-start">' +
                 '<div class="d-flex w-100 justify-content-between">' +
-                '<h5 class="mb-1">' + location.contentTitle + '</h5>' +
+                '<h5 class="mb-1">' + location.label + ': ' + location.contentTitle + '</h5>' +
                 '<small class="text-muted">' + location.types.join(', ') + '</small>' +
                 '</div >' +
                 '<p class="mb-1">' + location.contentBody + '</p>' +
