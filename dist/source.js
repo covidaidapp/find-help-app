@@ -17,20 +17,18 @@ sourcecode.visibleMarkers = visibleMarkers;
 // Filter markers by service type
 sourcecode.filterVisibility = function (filter) {
     markers.forEach(function (marker) {
-
         if (filter) {
             // If filtering only set the markers that match to true
-            var services = marker.title.split(',')
+            var services = marker.title.split(',') // We hijack the title attribute of the marker to track it's services
             var visiblity = services.indexOf(filter) !== -1
             marker.setVisible(visiblity);
         } else {
             // If no filter set to true
             marker.setVisible(true);
         }
-
-
     })
 
+    // Redraw all markers -- this will trigger the "clusterstart" and "clusterend" events so we can redraw all our extras as well
     markerCluster.repaint ? markerCluster.repaint() : null
 }
 
@@ -44,28 +42,10 @@ sourcecode.initMap = function () {
         mapTypeControl: false
 
     });
+    var infoWindow = null;
 
-    var infoWindows = Object.values(locations)
-        .map(function (location) {
-            var contentString = '<div id="content">' +
-                '<div id="siteNotice">' +
-                '</div>' +
-                '<h1 id="firstHeading" class="firstHeading">' + location.contentTitle + '</h1>' +
-                '<div id="bodyContent">' +
-                location.contentBody +
-                '</div>' +
-                '<div>' +
-                '<hr>' +
-                '<p>Email: <a href="mailto:' + location.contact.email + '">' + location.contact.email + '</a></p>' +
-                '<p>Phone: <a href="tel:' + location.contact.number + '">' + location.contact.number + '</a></p>' +
-                '<div>' +
-                '</div>';
-
-            return new google.maps.InfoWindow({
-                content: contentString
-            })
-        })
-
+    // We iterate over all locations to create markers
+    // This pretty much orchestrates everything since the map is the main interaction window
     markers = Object.values(locations)
         .map(function (location, i) {
             var marker = new google.maps.Marker({
@@ -76,12 +56,38 @@ sourcecode.initMap = function () {
 
             marker.addListener('click', function () {
                 infoWindows[i].open(map, marker);
+                map.setCenter(marker.getPosition());
+
+                var contentString = '<div id="content">' +
+                    '<div id="siteNotice">' +
+                    '</div>' +
+                    '<h1 id="firstHeading" class="firstHeading">' + location.contentTitle + '</h1>' +
+                    '<div id="bodyContent">' +
+                    location.contentBody +
+                    '</div>' +
+                    '<div>' +
+                    '<hr>' +
+                    '<p>Email: <a href="mailto:' + location.contact.email + '">' + location.contact.email + '</a></p>' +
+                    '<p>Phone: <a href="tel:' + location.contact.number + '">' + location.contact.number + '</a></p>' +
+                    '<div>' +
+                    '</div>';
+
+                // Reuse the info window or not
+                if (infoWindow && infoWindow.setContentString) {
+                    infoWindow.setContentString(contentString)
+                } else {
+                    infoWindow = google.maps.InfoWindow({
+                        content: contentString
+                    })
+                }
             });
 
             // The Marker Cluster app doesn't have events for when it renders a single marker without a cluster.
             // We want to piggyback on an existing event so that we can render a circle of influence
             // when the marker cluster lib tells us it's singled out a marker.
             marker.addListener('title_changed', function () {
+
+                // Save some processing juice here by skipping on hidden markers (based on a filter users select for service types)
                 if (!marker.getVisible()) {
                     return;
                 }
@@ -100,8 +106,12 @@ sourcecode.initMap = function () {
                     color = '#F4B400'
                 }
 
-                // Only push this if Radius is less than current radius
-                // TODO: Write the above code for reasons outlined below
+                // Issue: Product is too dark at zoom levels
+                // Solution: If + Else: Use this to create a border color change on the map itself vs rendering the radius to map.
+                // Only push this if the radius is less than the diagonal distance on the map screen.
+                // If it covers the whole map we don't want to render the circle as too many circles make the map unreadable.
+                // Additional UX Improvement -- Increase the stroke logrithmically to a max stroke so users are nudged slightly that we are no longer
+                // TODO: Write the above code
                 serviceCircles.push(new google.maps.Circle({
                     strokeColor: color,
                     strokeOpacity: 0.3,
@@ -112,12 +122,6 @@ sourcecode.initMap = function () {
                     center: marker.position,
                     radius: locations[marker.getLabel()].serviceRadius
                 }));
-                // Issue: Product is too dark at zoom levels
-                // Solution: Else use this to create a border color change on the map itself vs rendering the radius to map.
-                // Lots of overlapping radii will be too dark
-                // Additional UX Improvement -- Increase the stroke logrithmically to a max stroke so users are nudged slightly that we are no longer
-                // drawing the circle of influence since they're inside it
-                // TODO: Write the above code :D
             });
 
             return marker;
@@ -131,42 +135,44 @@ sourcecode.initMap = function () {
         gridSize: 30
     });
 
+    // Set up event listeners to tell us when the map has started refreshing.
     markerCluster.addListener('clusteringbegin', function (mc) {
+        $("#visible-markers").html('<h2>Loading List View ... </h2>');
+
         serviceCircles.forEach(function (circle) {
-            // Check this first since not everything we out in here is a useful (aka may include nulls due to previous business logic)
+            // Check this first since not everything we put into serviceCircles is a valid circle object, some may be null
             if (circle.setMap) {
                 circle.setMap(null);
             }
         })
-
-        // Clear it to save space (even as an array of nulls)
-        serviceCircles = [];
     })
 
-    markerCluster.addListener('clusteringend', function (mc) {
+    // The clusters have been computed so we can 
+    markerCluster.addListener('clusteringend', function (newClusterParent) {
         visibleMarkers = [];
-        mc.getClusters().forEach(function (cluster) {
-            if (cluster.getSize() === 1) {
-                var singleMarker = cluster.getMarkers()[0]
-                singleMarker.setTitle(singleMarker.getTitle()) // Trigger Radius Drawing
-                visibleMarkers.push(singleMarker);
-            } else {
-                var maxMarkerRadius = 0;
-                var maxMarker;
-                cluster.getMarkers().forEach(function (singleMarker) {
-                    // Update maxMarker to higher value if found.
-                    var newPotentialMaxMarkerRadius = Math.max(maxMarkerRadius, locations[singleMarker.label].serviceRadius);
-                    maxMarker = newPotentialMaxMarkerRadius > maxMarkerRadius ? singleMarker : maxMarker
-                    visibleMarkers.push(singleMarker); // Register it so we can clear or manipulate it later
-                })
-                if (maxMarker) {
-                    maxMarker.setTitle(maxMarker.getTitle()) // Trigger Radius Drawing on max radius marker for the cluster
-                }
+        serviceCircles = [];
+
+        newClusterParent.getClusters().forEach(function (cluster) {
+            var maxMarkerRadius = 0;
+            var maxMarker;
+
+            // Figure out which marker in each cluster will generate a circle.
+            cluster.getMarkers().forEach(function (singleMarker) {
+                // Update maxMarker to higher value if found.
+                var newPotentialMaxMarkerRadius = Math.max(maxMarkerRadius, locations[singleMarker.label].serviceRadius);
+                maxMarker = newPotentialMaxMarkerRadius > maxMarkerRadius ? singleMarker : maxMarker
+                visibleMarkers.push(singleMarker); // Register it so we can clear or manipulate it later
+            })
+
+            // Draw a circle for the marker with the largest radius for each cluster (even clusters with 1 marker)
+            if (maxMarker) {
+                maxMarker.setTitle(maxMarker.getTitle()) // Trigger Radius Drawing on max radius marker for the cluster
             }
         });
 
         // Prepare HTML content for side list view
         var newListContent = ''
+        // Rebuild list using currently visible markers
         visibleMarkers.forEach(function (marker) {
             var location = locations[marker.getLabel()]
             newListContent +=
@@ -179,6 +185,7 @@ sourcecode.initMap = function () {
                 '</a >'
         })
 
+        // In case there aren't any visible markers show a friendly message
         if (!newListContent) {
             newListContent = '<a href="#" class="list-group-item list-group-item-action flex-column align-items-start">' +
                 '<div class="d-flex w-100 justify-content-between">' +
@@ -188,11 +195,12 @@ sourcecode.initMap = function () {
                 '</a >'
         }
 
-        // Update the list on the right
+        // Refresh the HTML element on the right scroll view
         $("#visible-markers").html(newListContent);
     })
 }
 
+// Handle click events in the right scroll view by triggering the info window for the map view
 sourcecode.activateMarker = function (markerLabel) {
     var foundMarker;
 
@@ -204,6 +212,7 @@ sourcecode.activateMarker = function (markerLabel) {
         }
     });
 
-    // Force a click event on the marker to trigger the info bubble
+    // Force a click event on the marker to trigger the info bubble using the map 
+    // view to control rendering beacuse it's less error prone to API changes with low maintenance.
     new google.maps.event.trigger(foundMarker, 'click');
 }

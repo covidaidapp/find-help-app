@@ -1,3 +1,5 @@
+// Simple model for the data. The map should be able to handle 10k records or so. Might struggle if we're not careful on the list view to the right.
+// The only trick to the data is that it's a hash instead of an array to allow us to reference this data in our event handlers. 
 window.locationData = window.locationData || {
     '1': { lat: -31.563910, lng: 147.154312, label: '1', contentTitle: 'Bob\'s Supplies', contentBody: '<p>This is the <strong>HTML</strong> content</p>', types: ['food', 'supplies', 'aid'], contact: { number: '+1 800 555 1234', email: 'email@email.com' }, serviceRadius: 24000 },
     '2': { lat: -33.718234, lng: 150.363181, label: '2', contentTitle: 'Bob\'s Supplies', contentBody: '<p>This is the <strong>HTML</strong> content</p>', types: ['food', 'aid'], contact: { number: '+1 800 555 1234', email: 'email@email.com' }, serviceRadius: 24000 },
