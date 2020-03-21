@@ -55,7 +55,6 @@ sourcecode.initMap = function () {
             });
 
             marker.addListener('click', function () {
-                infoWindows[i].open(map, marker);
                 map.setCenter(marker.getPosition());
 
                 var contentString = '<div id="content">' +
@@ -75,10 +74,12 @@ sourcecode.initMap = function () {
                 // Reuse the info window or not
                 if (infoWindow && infoWindow.setContentString) {
                     infoWindow.setContentString(contentString)
+                    infoWindows[i].open(map, marker);
                 } else {
                     infoWindow = google.maps.InfoWindow({
                         content: contentString
                     })
+                    infoWindows[i].open(map, marker);
                 }
             });
 
